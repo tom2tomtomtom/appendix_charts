@@ -1,4 +1,5 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import Chart from "chart.js/auto";
 
 interface EditableSlideProps {
   initialTitle?: string;
@@ -11,6 +12,50 @@ export const EditableSlide: React.FC<EditableSlideProps> = ({
 }) => {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const captionRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [title, setTitle] = useState(initialTitle);
+  const [caption, setCaption] = useState(initialCaption);
+
+  // persist edits in localStorage
+  useEffect(() => {
+    const storedTitle = localStorage.getItem("slide-title");
+    const storedCaption = localStorage.getItem("slide-caption");
+    if (storedTitle) setTitle(storedTitle);
+    if (storedCaption) setCaption(storedCaption);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("slide-title", title);
+    localStorage.setItem("slide-caption", caption);
+  }, [title, caption]);
+
+  // render simple line chart once on mount
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const chart = new Chart(canvasRef.current, {
+      type: "line",
+      data: {
+        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        datasets: [
+          {
+            label: "Revenue",
+            data: [3, 4, 5, 4, 6, 7],
+            borderColor: "rgb(59, 130, 246)",
+            backgroundColor: "rgba(59, 130, 246,0.4)",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+      },
+    });
+    return () => {
+      chart.destroy();
+    };
+  }, []);
 
   // Placeholder for AI rewrite (future)
   const handleRewrite = () => {
@@ -21,11 +66,8 @@ export const EditableSlide: React.FC<EditableSlideProps> = ({
   return (
     <div className="w-full max-w-4xl aspect-video bg-white rounded-xl shadow-lg flex flex-col overflow-hidden border border-gray-200">
       <div className="flex-1 flex flex-col items-center justify-center p-8">
-        {/* Chart placeholder */}
         <div className="w-full h-2/3 flex items-center justify-center mb-6">
-          <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-300 rounded-lg flex items-center justify-center text-blue-600 font-bold text-xl border border-blue-200">
-            Chart.js Placeholder
-          </div>
+          <canvas ref={canvasRef} className="w-full h-full" />
         </div>
         {/* Editable title */}
         <h2
@@ -34,8 +76,9 @@ export const EditableSlide: React.FC<EditableSlideProps> = ({
           suppressContentEditableWarning
           className="text-2xl font-bold mb-2 outline-none focus:ring-2 focus:ring-blue-300 rounded px-2"
           data-testid="slide-title"
+          onInput={(e) => setTitle(e.currentTarget.innerText)}
         >
-          {initialTitle}
+          {title}
         </h2>
         {/* Editable caption/insight */}
         <div
@@ -44,8 +87,9 @@ export const EditableSlide: React.FC<EditableSlideProps> = ({
           suppressContentEditableWarning
           className="text-lg text-gray-700 mb-4 outline-none focus:ring-2 focus:ring-blue-200 rounded px-2 min-h-[2em]"
           data-testid="slide-caption"
+          onInput={(e) => setCaption(e.currentTarget.innerText)}
         >
-          {initialCaption}
+          {caption}
         </div>
         <div className="flex gap-2 items-center">
           <button
